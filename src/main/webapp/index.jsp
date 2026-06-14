@@ -43,7 +43,7 @@
         <span class="badge">SonarQube</span>
         <br><br>
         <p>Pipeline: GitHub Actions → ECR → EKS</p>
-        <p>Deployed by: Aravind Boopathy | Version 4.0</p>
+        <p>Deployed by: Aravind Boopathy | Version6.0</p>
     </div>
 </body>
 </html>
