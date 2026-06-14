@@ -88,10 +88,9 @@ jobs:
           sed -i "s|image: .*|image: $IMAGE|g" deployment.yaml
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
-          git remote set-url origin https://x-access-token:${{ secrets.MANIFEST_REPO_TOKEN }}@github.com/aravindboopathy99-debug/devops-k8s-manifest.git
           git add deployment.yaml
           git commit -m "Update image tag to ${{ github.run_number }}" || echo "No changes to commit"
-          git push origin main
+          git push
 
       - name: Slack Notification Success
         if: success()
