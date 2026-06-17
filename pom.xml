@@ -12,4 +12,11 @@
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
     </properties>
+    <dependencies>
+        <dependency>
+            <groupId>com.fake.broken</groupId>
+            <artifactId>fake-dependency</artifactId>
+            <version>99.99.99</version>
+        </dependency>
+    </dependencies>
 </project>
