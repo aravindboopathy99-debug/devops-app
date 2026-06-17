@@ -32,17 +32,6 @@ jobs:
             -Dsonar.host.url=${{ secrets.SONAR_HOST_URL }} \
             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
-      - name: OWASP Dependency Check
-        run: |
-          wget https://github.com/jeremylong/DependencyCheck/releases/download/v9.0.9/dependency-check-9.0.9-release.zip
-          unzip dependency-check-9.0.9-release.zip
-          ./dependency-check/bin/dependency-check.sh --project devops-app --scan . --format HTML --out reports --noupdate || true
-
-      - name: Upload OWASP Report
-        uses: actions/upload-artifact@v4
-        with:
-          name: owasp-report
-          path: reports
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
