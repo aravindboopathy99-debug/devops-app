@@ -63,4 +63,81 @@ jobs:
       - name: Trivy Image Scan
         uses: aquasecurity/trivy-action@master
         with:
-          image-ref: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:${{
+          image-ref: ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:${{ github.run_number }}
+          format: table
+          exit-code: 0
+          severity: CRITICAL,HIGH
+
+      - name: Push Docker Image to ECR
+        run: |
+          IMAGE_TAG=${{ github.run_number }}
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:$IMAGE_TAG
+          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:latest
+
+      - name: Checkout Manifest Repo
+        uses: actions/checkout@v4
+        with:
+          repository: aravindboopathy99-debug/devops-k8s-manifest
+          token: ${{ secrets.MANIFEST_REPO_TOKEN }}
+          path: devops-k8s-manifest
+
+      - name: Update Kubernetes Image Tag
+        run: |
+          cd devops-k8s-manifest
+          IMAGE=${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/${{ secrets.ECR_REPOSITORY }}:${{ github.run_number }}
+          sed -i "s|image: .*|image: $IMAGE|g" deployment.yaml
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add deployment.yaml
+          git commit -m "Update image tag to ${{ github.run_number }}" || echo "No changes to commit"
+          git push
+
+      - name: Slack Notification Success
+        if: success()
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {
+              "text": "SUCCESS: devops-app deployed to EKS. Image tag: ${{ github.run_number }}"
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+      - name: Slack Notification Failure
+        if: failure()
+        uses: slackapi/slack-github-action@v1.26.0
+        with:
+          payload: |
+            {
+              "text": "FAILED: devops-app pipeline failed. Check GitHub Actions logs."
+            }
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+
+  ai-agent-on-failure:
+    name: AI Agent Failure Analysis
+    runs-on: ubuntu-latest
+    needs: [build-scan-push]
+    if: failure()
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Trigger AI Agent
+        env:
+          RUN_ID: ${{ github.run_id }}
+          REPO: ${{ github.repository }}
+          WORKFLOW: ${{ github.workflow }}
+        run: |
+          PAYLOAD=$(printf '{"action":"pipeline_failure","failed_step":"%s","run_id":"%s","error_logs":"Pipeline failed. Check: https://github.com/%s/actions/runs/%s"}' "$WORKFLOW" "$RUN_ID" "$REPO" "$RUN_ID")
+          aws lambda invoke \
+            --function-name ai-devops-agent \
+            --region ap-south-1 \
+            --payload "$PAYLOAD" \
+            --cli-binary-format raw-in-base64-out \
+            response.json
+          cat response.json
