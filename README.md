@@ -1,4 +1,4 @@
-# 🚀 DevOps Project 2 + 3 — Agentic AI on AWS EKS with Full CI/CD Pipeline
+# 🚀 DevOps Project  — Agentic AI on AWS EKS with Full CI/CD Pipeline
 
 > **Built by Aravind Boopathy** | DevOps Engineer | Ex-Capgemini  
 > Azure (AZ-104) | Terraform | Kubernetes | AWS EKS | ArgoCD | Agentic AI
